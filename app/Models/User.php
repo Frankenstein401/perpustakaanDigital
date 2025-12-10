@@ -67,6 +67,16 @@ class User extends Authenticatable
             'model_has_roles',
             'model_id',
             'role_id'
-        );
+        )->withPivot('model_type');
+    }
+
+    public function isActive() 
+    {
+        return $this->verification_status == true;
+    }
+
+    public function isVerified()
+    {
+        return !is_null($this->email_verified_at);
     }
 }

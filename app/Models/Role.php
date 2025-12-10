@@ -16,7 +16,6 @@ class Role extends Model
         'name',
         'description',
         'guard_name',
-
     ];
 
     protected $hidden = [

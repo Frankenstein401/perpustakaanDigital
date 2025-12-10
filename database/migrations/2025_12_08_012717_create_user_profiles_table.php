@@ -30,8 +30,7 @@ return new class extends Migration
 
             $table->string('profile_picture', 255)->nullable();
 
-            $table->enum('member_type', ['public', 'student', 'teacher', 'lecturer'])
-                ->default('public');
+            $table->string('member_type')->default('public');
 
             $table->string('institution_name', 100)->nullable();
 
