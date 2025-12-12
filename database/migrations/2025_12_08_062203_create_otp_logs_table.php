@@ -20,7 +20,7 @@ return new class extends Migration
                 ->on('users')
                 ->onDelete('cascade');
 
-            $table->uuid('otp_code_hash');
+            $table->string('otp_code_hash');
 
             $table->enum('channel', ['email', 'sms']);
 

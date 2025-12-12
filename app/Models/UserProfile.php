@@ -16,6 +16,7 @@ class UserProfile extends Model
     protected $table = 'users_profiles';
 
     protected $fillable = [
+        'user_id',
         'full_name',
         'phone_number',
         'address',
@@ -23,7 +24,7 @@ class UserProfile extends Model
         'profile_picture',
         'member_type',
         'institution_name',
-        'identity_number'
+        'identity_number',
     ];
 
     public function user()
