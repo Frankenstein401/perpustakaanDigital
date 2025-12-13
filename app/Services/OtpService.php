@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OtpMail;
 
-class OtpService 
+class OtpService
 {
     public function generateAndSend(User $user, string $purpose = 'email_verification')
     {
@@ -41,7 +41,39 @@ class OtpService
                 'data' => null
             ];
         }
-    } 
+    }
+
+    public function resend(User $user)
+    {
+        if ($user->isVerified()) {
+            return [
+                'success' => false,
+                'message' => 'Email sudah terverifikasi',
+                'data' => null
+            ];
+        }
+
+        $existingOtp = OtpLog::where('user_id', $user->id)
+            ->where('is_used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+
+        if ($existingOtp) {
+            $otp = OtpLog::where('user_id', $user->id)
+                ->where('is_used', false)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
+
+            $minutesLeft = Carbon::now()->diffInMinutes($otp->expires_at);
+
+            return [
+                'success' => false,
+                'message' => "OTP masih valid. Expired dalam {$minutesLeft} menit.",
+            ];
+        }
+
+        return $this->generateAndSend($user, 'email_verification');
+    }
 
     public function verify(User $user, string $otpCode)
     {
@@ -52,7 +84,7 @@ class OtpService
             ->first();
 
 
-        if(!$otpLog) {
+        if (!$otpLog) {
             return [
                 'success' => false,
                 'message' => 'Kode OTP tidak valid atau sudah kadaluarsa',
@@ -60,9 +92,9 @@ class OtpService
             ];
         }
 
-        if(!Hash::check($otpCode, $otpLog->otp_code_hash)) {
+        if (!Hash::check($otpCode, $otpLog->otp_code_hash)) {
             return [
-                'success' =>false,
+                'success' => false,
                 'message' => 'Kode OTP yang dimasukkan salah'
             ];
         }

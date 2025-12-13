@@ -8,6 +8,7 @@ use App\Models\Role;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\UserProfile;
+use Illuminate\Support\Carbon;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Log;
 
@@ -87,6 +88,33 @@ class AuthService
                 'message' => 'Register gagal' . $e->getMessage()
             ];
         }
+    }
+
+    public function resendOtp(User $user)
+    {
+        if ($user->isVerified()) {
+            return [
+                'success' => false,
+                'message' => 'Akun sudah terverifikasi',
+                'data' => null
+            ];
+        }
+
+        $existingOtp = Log::where('user_id', $user->id)
+            ->where('is_user', false)
+            ->where('expires_at', Carbon::now())
+            ->existed();
+
+        if ($existingOtp) {
+            return [
+                'success' => true,
+                'message' => 'Kode OTP baru berhasil dikirim',
+                'data' => null
+            ];
+        }
+
+        $otpService = new OtpService();
+        return $otpService->generateAndSend($user, 'email_verification');
     }
 
     public function login(string $identifier, string $password)

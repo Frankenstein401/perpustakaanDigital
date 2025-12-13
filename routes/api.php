@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function (){
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
-    Route::post('verify_otp', [AuthController::class, 'verifyOtp']);
+    Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('resend-otp', [AuthController::class, 'resendOtp']);
 }) ;
 
 Route::middleware('auth:api')->prefix('auth')->group(function() {

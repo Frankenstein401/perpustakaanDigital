@@ -78,7 +78,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function isVerified()
     {
-        return $this->verification_status == true;
+        return $this->verification_status == 'verified';
     }
 
      public function hasRole(string $roleName): bool

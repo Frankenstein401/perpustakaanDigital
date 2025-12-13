@@ -13,10 +13,12 @@ class AuthController extends Controller
 {
 
     protected AuthService $authService;
+    protected OtpService $otpService;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, OtpService $otpService)
     {
         $this->authService = $authService;
+        $this->otpService = $otpService;
     }
 
     public function register(Request $request)
@@ -53,8 +55,27 @@ class AuthController extends Controller
             ], 404);
         }
 
-        $otpService = new OtpService();
-        $result = $otpService->verify($user, $request->otp_code);
+        $result = $this->otpService->verify($user, $request->otp_code);
+
+        return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    public function resendOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email tidak ditemukan',
+                'data' => null
+            ], 404);
+        }
+
+        $result = $this->otpService->resend($user);
 
         return response()->json($result, $result['success'] ? 200 : 400);
     }
