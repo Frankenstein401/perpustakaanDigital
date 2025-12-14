@@ -8,6 +8,7 @@ use App\Models\OtpLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OtpMail;
+use Illuminate\Container\Attributes\Log;
 
 class OtpService
 {
@@ -79,7 +80,7 @@ class OtpService
     {
         $otpLog = OtpLog::where('user_id', $user->id)
             ->where('is_used', false)
-            ->where('expires_at', Carbon::now())
+            ->where('expires_at', '>', Carbon::now())
             ->orderBy('created_at', 'desc')
             ->first();
 

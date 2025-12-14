@@ -39,6 +39,30 @@ class AuthController extends Controller
         return response()->json($result, $result['success'] ? 201 : 400);
     }
 
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $result = $this->authService->forgotPassword($request->email);
+        
+        return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp_code' => 'required|string|size:6',
+            'password' => 'required|string|min:6|confirmed'
+        ]);
+
+        $result = $this->authService->resetPassword($request->email, $request->otp_code, $request->password);
+
+        return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
     public function verifyOtp(Request $request)
     {
         $request->validate([

@@ -90,6 +90,53 @@ class AuthService
         }
     }
 
+    public function forgotPassword(string $email)
+    {
+        $user = User::where('email', $email)->first();
+
+        if(!$user) {
+            return [
+                'success' => false,
+                'message' => 'Email tidak terdaftar',
+                'data' => null
+            ];
+        }
+
+        $otpService = new OtpService();
+
+        return $otpService->generateAndSend($user, 'password_reset');
+    }
+
+    public function resetPassword(string $email, string $otpCode, string $newPassword)
+    {
+        $user = User::where('email', $email)->first();
+
+        if(!$user) {
+            return [
+                'success' => false,
+                'message' => 'Email tidak terdaftar',
+                'data' => null
+            ];
+        }
+
+        $otpService = new OtpService();
+        $otpResult = $otpService->verify($user, $otpCode);
+
+        if(!$otpResult['success']) {
+            return $otpResult;
+        }
+
+        $user->update([
+            'password' => Hash::make($newPassword)
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Password berhasil di reset, silahkan login dengan password baru',
+            'data' => null
+        ];
+    }
+
     public function resendOtp(User $user)
     {
         if ($user->isVerified()) {
