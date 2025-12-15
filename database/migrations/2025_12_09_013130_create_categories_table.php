@@ -18,9 +18,8 @@ return new class extends Migration
 
             $table->string('slug', 100);
 
-            $table->uuid('parent_id');
+            $table->uuid('parent_id')->nullable();
             $table->foreign('parent_id')
-                ->nullable()
                 ->references('id')
                 ->on('categories')
                 ->onDelete('cascade');

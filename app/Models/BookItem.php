@@ -21,11 +21,11 @@ class BookItem extends Model
         'inventory_code',
         'condition',
         'status',
-        'procedure_at'
+        'procured_at'
     ];
 
     protected $casts = [
-        'procedure_at' => 'datetime'
+        'procured_at' => 'date'
     ];
 
     public function book() 

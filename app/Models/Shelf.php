@@ -14,5 +14,13 @@ class Shelf extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected $fillable = [
+        'code',
+        'location_name'
+    ];
     
+    public function bookItems()
+    {
+        return $this->hasMany(BookItem::class, 'shelf_id');
+    }
 }
