@@ -107,6 +107,11 @@ class AuthService
         return $otpService->generateAndSend($user, 'password_reset');
     }
 
+    function tambahUser()
+    {
+        global $user;
+    }
+
     public function resetPassword(string $email, string $otpCode, string $newPassword)
     {
         $user = User::where('email', $email)->first();
