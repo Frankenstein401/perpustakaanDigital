@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 
 class AuthService
 {
-
     public function register(array $data)
     {
         if (User::where('email', $data['email'])->exists()) {
@@ -58,8 +57,7 @@ class AuthService
                         'model_type' => 'App\Models\User'
                     ]);
                 }
-
-                // Return $user agar bisa diakses di luar transaction
+                
                 return $user;
             });
 
