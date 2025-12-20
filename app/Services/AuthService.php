@@ -169,8 +169,8 @@ class AuthService
 
     public function login(string $identifier, string $password)
     {
-        $user = User::where('email', $identifier)
-            ->orWhere('username', $identifier)
+        $user = User::whereRaw('LOWER(email) = ?', [strtolower($identifier)])
+            ->orWhereRaw('LOWER(username)', [strtolower($identifier)])
             ->first();
 
         if (!$user) {

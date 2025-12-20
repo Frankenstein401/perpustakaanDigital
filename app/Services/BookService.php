@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Book;
-use App\Models\BookItem;
+use Illuminate\Support\Facades\DB;
 use App\Models\Author;
 use App\Models\Category;
 use App\Models\Publisher;
@@ -16,20 +16,29 @@ class BookService
     {
         $query = Book::with('author', 'publisher', 'category');
 
-        if (isset($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
+        if (isset($filters['category']) && $filters['category'] != '') {
+            $query->whereHas('category', function ($q) use ($filters) {
+                $searchTerm = $filters['category'];
+                if (Str::isUuid($searchTerm)) {
+                    $q->where('id', $searchTerm);
+                } else {
+                    $q->where(function ($subQ) use ($searchTerm) {
+                        $subQ->where('name', 'like', "{$searchTerm}%")
+                            ->orWhere('slug', 'like', "{$searchTerm}%");
+                    });
+                }
+            });
         }
 
-        if (isset($filters['search'])) {
+        if (isset($filters['search']) && $filters['search'] != '') {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
+                $q->where('title', 'like', "%{$search}%")
                     ->orWhere('isbn', 'like', "%{$search}%");
             });
         }
 
         $books = $query->paginate(15);
-
         return [
             'success' => true,
             'message' => 'Data buku berhasil diambil',
@@ -45,7 +54,7 @@ class BookService
         ];
     }
 
-    public function getBookById(string $id) 
+    public function getBookById(string $id)
     {
         $book = Book::with(['author', 'publisher', 'category', 'items.shelf'])
             ->find($id);
@@ -66,66 +75,139 @@ class BookService
 
     public function createBook(array $data)
     {
-        if(!Author::find($data['author_ud'])){
-            return [
-                'success' => false,
-                'message' => 'Author tidak ditemukan'
-            ];
-        }
+        DB::beginTransaction();
 
-        if(!Publisher::find($data['publisher_id'])) {
-            return [
-                'success' => false,
-                'message' => 'Penerbit tidak ditemukan'
-            ];
-        }
+        try {
+            if (isset($data['author_name'])) {
+                $author = Author::firstOrCreate(
+                    ['name' => trim($data['author_name'])]
+                );
+                $data['author_id'] = $author->id;
+                unset($data['author_name']);
+            } elseif (!isset($data['author_id'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Author wajib diisi'
+                ];
+            }
 
-        if(!Category::find($data['category_ud'])){
-            return [
-                'success' => false,
-                'message' => 'Kategori tidak ditemukan'
-            ];
-        }
+            if (isset($data['publisher_name'])) {
+                $publisher = Publisher::firstOrCreate(
+                    ['name' => trim($data['publisher_name'])]
+                );
+                $data['publisher_id'] = $publisher->id;
+                unset($data['publisher_name']);
+            } elseif (!isset($data['publisher_id'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Publisher wajib diisi'
+                ];
+            }
 
-        $data['slug'] = Str::slug($data['title']);
-        $book = Book::create($data);
-        $book->load('author', 'publisher', 'category');
+            if ($data['category_slug']) {
+                $category = Category::where('slug', $data['category_slug'])->first();
 
-        return [
-            'success' => true,
-            'message' => 'Data buku berhasil ditambahkan',
-            'data' => $data
-        ];
-    }
+                if (!$category) {
+                    return [
+                        'success' => false,
+                        'message' => 'Kategori tidak ditemukan.'
+                    ];
+                }
+                $data['category_id'] = $category->id;
+                unset($data['category_slug']);
+            } elseif (!isset($data['category_id'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Category wajib diisi'
+                ];
+            }
 
-    public function updateBook(string $id, array $data) 
-    {
-        $book = Book::find('id');
-
-        if(!$book) {
-            return [
-                'success' => false,
-                'message' => 'Buku tidak ditemukan'
-            ];
-        }
-
-        if(isset($data['title']) && $data['title'] !== $book->title){
             $data['slug'] = Str::slug($data['title']);
+
+            $book = Book::create($data);
+            $book->load(['author', 'publisher', 'category']);
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Buku berhasil ditambahkan',
+                'data' => $book
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return [
+                'success' => false,
+                'message' => 'Gagal menambahkan buku' . $e->getMessage()
+            ];
         }
-
-        $book->update($data);
-        $book->load('author', 'publisher', 'category');
-
-        return [
-            'success' => true,
-            'message' => 'Buku berhasil diperbarui',
-            'data' => $book
-        ];
     }
 
-    public function deleteBook(string $id) 
+    public function updateBook(string $id, array $data)
     {
-        $book = Book::find('id');
+        DB::beginTransaction();
+
+        try {
+            $book = Book::find($id);
+
+            if (!$book) {
+                return [
+                    'success' => false,
+                    'message' => 'Buku tidak ditemukan'
+                ];
+            }
+
+            if (isset($data['author_name'])) {
+                $author = Author::firstOrCreate(['name' => trim($data['author_name'])]);
+                $data['author_id'] = $author->id;
+                unset($data['author_name']);
+            }
+
+            if (isset($data['publisher_name'])) {
+                $publisher = Publisher::firstOrCreate(['name' => trim($data['publisher_name'])]);
+                $data['publisher_id'] = $publisher->id;
+                unset($data['publisher_name']);
+            }
+
+            if (isset($data['category_slug'])) {
+                $category = Category::where('slug', $data['category_slug']->first());
+
+                if ($category) {
+                    $data['category_id'] = $category->id;
+                }
+
+                unset($data['category_slug']);
+            }
+
+            if (isset($data['title']) && $data['title'] !== $book->title) {
+                $data['slug'] = Str::slug($data['title']);
+            }
+
+            $book->update($data);
+            $book->load('author', 'publisher', 'category');
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Buku berhasil diperbarui',
+                'data' => $book
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return [
+                'success' => false,
+                'message' => 'Buku gagal diupdate' . $e->getMessage()
+            ];
+        }
+    }
+
+
+    public function deleteBook(string $id)
+    {
+        $book = Book::find($id);
 
         if (!$book) {
             return [
@@ -136,7 +218,7 @@ class BookService
 
         $borrowedItems = $book->items()->where('status', 'borrowed')->count();
 
-        if (!$borrowedItems) {
+        if ($borrowedItems > 0) {
             return [
                 'success' => false,
                 'message' => 'Tidak bisa dihapus, buku sedang dipinjam'
@@ -150,5 +232,4 @@ class BookService
             'message' => 'Buku berhasil dihapus'
         ];
     }
-
 }
