@@ -30,15 +30,37 @@ class BookService
             });
         }
 
+        if (isset($filters['author']) && $filters['author'] != '') {
+            $query->whereHas('author', function($q) use ($filters) {
+                $q->where('name', 'like', '%', "{$filters['author']}", '%');
+            });
+        }
+
+        if (isset($filters['publisher']) && $filters['publisher'] != '') {
+            $query->whereHas('publisher', function($q) use ($filters) {
+                $q->where('name', 'like', '%', "{$filters['publisher']}", '%');
+            }); 
+        }
+
         if (isset($filters['search']) && $filters['search'] != '') {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('isbn', 'like', "%{$search}%");
+                    ->orWhere('isbn', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
-        $books = $query->paginate(15);
+        if (isset($filters['year'])) {
+            $query->where('publication_year', $filters['year']);
+        }
+
+        $sortBy = $filters['sort_by'] ?? 'created_at';
+        $sortOrder = $filters['sort_order'] ?? 'desc';
+        $query->orderBy($sortBy, $sortOrder);
+
+        $perPage = $filters['per_page'] ?? 15;
+        $books = $query->paginate($perPage);
         return [
             'success' => true,
             'message' => 'Data buku berhasil diambil',
@@ -203,7 +225,6 @@ class BookService
             ];
         }
     }
-
 
     public function deleteBook(string $id)
     {

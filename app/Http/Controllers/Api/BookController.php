@@ -15,7 +15,7 @@ class BookController extends Controller
     public function __construct(BookService $bookService)
     {
         $this->bookService = $bookService;
-    } 
+    }
 
     public function index(Request $request)
     {
@@ -29,7 +29,7 @@ class BookController extends Controller
     public function show(String $id)
     {
         $result = $this->bookService->getBookById($id);
-        
+
         return response()->json($result, $result['success'] ? 200 : 400);
     }
 
@@ -37,7 +37,12 @@ class BookController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'isbn' => 'nullable|string|unique:books,isbn',
+            'isbn' => [
+                'nullable',
+                'string',
+                'unique:books,isbn',
+                'regex:/^(978|979)-\d{1,5}-\d{1,7}-\d{1,7}-\d{1}$/', 
+            ],
 
             'author_id' => 'required|uuid|exists:author,id',
             'author_name' => 'require|string',
@@ -46,11 +51,14 @@ class BookController extends Controller
             'publisher_name' => 'required|string',
 
             'category_id' => 'required|uuid|exists:category,id',
-            'category_name' => 'required|string',
+            'category_slug' => 'required|string|exists:category,slug',
 
             'publisher_year' => 'nullable|integer|min:1900|max' . date('Y'),
             'description' => 'nullable|string',
             'cover_image' => 'nullable|string'
+        ], [
+            'title.required' => 'Judul buku wajib diisi.',
+            'isbn.unique' => 'ISBN sudah digunakan buku lain.',
         ]);
 
         $result = $this->bookService->createBook($request->all());
@@ -71,12 +79,12 @@ class BookController extends Controller
             'cover_image' => 'sometimes|string'
         ]);
 
-        $result = $this->bookService->updateBook($id,$request->all());
+        $result = $this->bookService->updateBook($id, $request->all());
 
-        return response()->json($result, $result['success'] ? 200 : 400);     
+        return response()->json($result, $result['success'] ? 200 : 400);
     }
 
-    public function destroy(String $id) 
+    public function destroy(String $id)
     {
         $result = $this->bookService->deleteBook($id);
 
